@@ -5,7 +5,7 @@
  * @author Mark Guinn <mark@adaircreative.com>
  * @package sstools
  */
-class SSTools{
+class SSTools {
 
 	/**
 	 * builds a dropdown from all the files of a certain type in a certain directory

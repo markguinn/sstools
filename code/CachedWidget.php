@@ -34,18 +34,12 @@ class CachedWidget extends Widget {
 
 
 	/**
-	 * default cache id is just the class name
+	 * returns the cache id - default is the classname
+	 * or $cacheID if set
+	 * @return string
 	 */
-	function __construct($record = null, $isSingleton = false){
-		parent::__construct($record, $isSingleton);
-		
-		if (!isset($this->cacheID)) {
-			if ($this->hasMethod('getCacheID')) {
-				$this->cacheID = $this->getCacheID();
-			} else {
-				$this->cacheID = get_class($this);
-			}
-		}
+	function getCacheID(){
+		return isset($this->cacheID) ? $this->cacheID : get_class($this);
 	}
 
 
@@ -58,12 +52,13 @@ class CachedWidget extends Widget {
 			return parent::WidgetHolder();
 		}
 	
-		$cache = Zend_Registry::get('cache');		
+		$cache = self::get_cache();
+		$id = $this->getCacheID();
 		
-		if (!$html = $cache->load($this->cacheID)) {
+		if (!$html = $cache->load($id)) {
 			$html = parent::WidgetHolder();
-			$cache->save($html, $this->cacheID, $this->cacheTags, $this->cacheSeconds);
-		} elseif (Director::isDev()) {
+			$cache->save($html, $id, $this->cacheTags, $this->cacheSeconds);
+		} elseif (Director::isDev() || Director::isTest()) {
 			$html = "<!-- cached widget -->$html<!-- end cached widget -->";
 		}
 
