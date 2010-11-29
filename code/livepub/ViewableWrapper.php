@@ -6,14 +6,12 @@
  */
  
  
-class LivePubWrapper extends ViewableData 
+class ViewableWrapper extends ViewableData 
 {
-	protected $_srcdata;
-	
 	/**
 	 * if using static publishing, this is the variable name	 
 	 */
-	protected $_varName;
+	protected $varName;
 	
 	/**
 	 * should the __get method make properties "live" in static published documents?
@@ -22,20 +20,27 @@ class LivePubWrapper extends ViewableData
 	 * database call or something.
 	 * can also be an array of which properties are "live"
 	 */
-	protected $_liveStaticVars = true;
+	protected $liveVars = true;
 	
 	/**
-	 * normally live statics are escaped using htmlentities automatically, but any
+	 * normally live vars are escaped using htmlentities automatically, but any
 	 * in this list will be outputted as-is
 	 */	
-	protected $_liveStaticUnescaped = array();
+	protected $liveVarsUnescaped = array();
+	
 	
 	/**
 	 * sets up the object
 	 * @param object|array $srcdata
 	 */
-	function __construct($srcdata) {
-		$this->_srcdata = $srcdata;
+	function __construct($src=false) {
+		if (is_object($src)){
+			$this->failover = $src;
+		} elseif (is_array($src)) {
+			$this->failover = new ArrayData($src);
+		}
+		
+		parent::__construct();
 	}
 	
 	
@@ -43,7 +48,72 @@ class LivePubWrapper extends ViewableData
 	 * returns the source object
 	 */
 	function getRawObject(){
-		return $this->_srcdata;
+		return $this->failover;
+	}
+	
+	
+	/**
+	 * Insures that any array or object is wrapped properly
+	 */
+	function __get($field){
+		$val = $this->wrapObject( parent::__get($field) );
+		
+		if (isset($this->varName) && is_object($val) && $val instanceof ViewableWrapper){
+			$val->setVar($this->varName . '_' . $field);
+		}
+		
+		return $val;
+	}
+	
+	
+	/**
+	 * If we're publishing, returns proper php
+	 */
+	public function obj($fieldName, $arguments = null, $forceReturnedObject = true, $cache = false, $cacheName = null) {
+		$value = parent::obj($fieldName, $arguments, $forceReturnedObject, $cache, $cacheName);
+		
+		// if we're publishing and this variable is qualified,
+		// output php code instead
+		if (
+			$this->failover 
+			&& $this->liveVars 
+			&& isset($this->varName) 
+			&& LivePubHelper::is_publishing() 
+			&& (!is_array($this->liveVars) || in_array($field, $this->liveVars))
+		) {
+			$accessor = "get{$fieldName}";
+			$php = '';
+
+			// find out how we got the data
+			if ($this->failover instanceof ArrayData){
+				$php = '$' . $this->varName . '["' . $fieldName . '"]';
+			} elseif (is_callable(array($this->failover, $fieldName))){
+				// !@TODO respect arguments
+				$php = '$' . $this->varName . '->' . $fieldName . '()';
+			} elseif (is_callable(array($this->failover, $accessor))){
+				// !@TODO respect arguments
+				$php = '$' . $this->varName . '->' . $accessor . '()';
+			} elseif (isset($this->failover, $fieldName)) {
+				$php = '$' . $this->varName . '->' . $fieldName;
+			}
+			
+			// return the appropriate php
+			if ($php){
+				if (is_object($value)){
+					if ($value instanceof ViewableWrapper) {
+						LivePubHelper::$init_code[] = '<?php $' . $value->getVar() . ' = ' . $php . ' ?>';
+					}
+					// !@TODO: only other option is DataObjectSet - check that this is handled right
+				} else {										
+					$value = in_array($fieldName, $this->liveVarsUnescaped)
+						? '<?php echo ' . $php . '; ?>'
+						: '<?php echo htmlentities(' . $php . '); ?>';
+					if ($forceReturnedObject) $value = new HTMLText($value);
+				}
+			}
+		}
+		
+		return $value;
 	}
 	
 	
@@ -61,6 +131,7 @@ class LivePubWrapper extends ViewableData
 	 * you set up. (could also be something like '_SESSION' to
 	 * access the session.
 	 */
+/*
 	protected $_get_cache = array();
 	function __get($field) {
 		$fn = "get$field";		
@@ -145,6 +216,7 @@ class LivePubWrapper extends ViewableData
 			return $this->_get_cache[$field];
 		}
 	}
+*/
 	
 	
 	/**
@@ -153,33 +225,33 @@ class LivePubWrapper extends ViewableData
 	 */
 	protected function wrapObject($obj) {
 		if (is_object($obj)) {
-			if ($obj instanceof ViewableData) {
+			// if it's an object, just check the type and wrap if needed
+			if ($obj instanceof ViewableWrapper) {
 				return $obj;
 			} else {
-				return new LivePubWrapper($obj);
+				return new ViewableWrapper($obj);
 			}
 		} elseif (is_array($obj)) {
-			return $this->wrapArray($obj);
+			// if it's an assoc array just wrap it, otherwise make a dataobjectset
+			if (ArrayLib::is_associative($obj)){
+				return new ViewableWrapper($obj);
+			} else {				
+				$set = new DataObjectSet();
+		
+				foreach ($obj as $i => $item) {
+					$wrap = $this->wrapObject($item);
+					$set->push($wrap);
+				}
+		
+				return $set;		
+			}
 		} else {
+			// it's a simple type, just return it
 			return $obj;
 		}
 	}
 	
 	
-	/**
-	 * transform an array into a DataobjectSet
-	 */
-	protected function wrapArray($arr) {
-		$set = new DataObjectSet();
-
-		foreach ($arr as $obj) {
-			$set->push($this->wrapObject($obj));
-		}
-
-		return $set;		
-	}
-		
-
 	/**
 	 * This is called by LivePubHelper to retrieve initialization
 	 * code that gets added to the top of the cached page.
@@ -189,12 +261,20 @@ class LivePubWrapper extends ViewableData
 	}
 
 	function setVar($name) {
-		$this->_varName = $name;
+		$this->varName = $name;
 	}
 	
 	function getVar() {
-		return $this->_varName;
+		return $this->varName;
 	}
-
+	
+	function getLiveVars(){
+		return $this->liveVars;
+	}
+	
+	function setLiveVars($lv){
+		$this->liveVars = $lv;
+	}
+	
 }
 

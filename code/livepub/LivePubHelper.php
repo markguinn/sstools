@@ -217,17 +217,19 @@ class LivePubHelper {
 	
 	/**
 	 * factory method to create a new wrapper object. if we're
-	 * static publishing and an appropriate helper is available
-	 * it will use that instead.
+	 * static publishing and an appropriate helper class is 
+	 * available it will use that instead. A helper class shouldn't
+	 * be needed very often but would be used if you wanted a totally
+	 * different class for publishing vs normal mode
 	 *
 	 * @param object|array $srcdata
 	 * @param string $class - what class to wrap it in
 	 * @param boolean $add_init_code [optional] - if true, the classes default static init code will be added automatically
 	 * @return ViewableWrapper
 	 */
-	static function wrap($object, $class = 'LivePubHelper', $add_init_code=true) {
+	static function wrap($object, $class = 'ViewableWrapper', $add_init_code=true) {
 		if (self::is_publishing()) {
-			$class2 = "{$class}_LivePubHelper";
+			$class2 = "{$class}_LivePub";
 			if (class_exists($class2, true)) $class = $class2;
 
 			$obj = new $class($object);
