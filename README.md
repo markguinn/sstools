@@ -19,8 +19,8 @@ Components
  * __UrlPagingDataObjectSet:__ works just like a normal dataobjectset
    but instead of using /blog?start=10 for paging, it uses URL segments like
    /blog/2.
- * SSTools: base namespace for utility functions
- * Forms/FieldTypes: additional form stuff. Some of it may be out of date with
+ * __SSTools__: base namespace for utility functions
+ * __Forms/FieldTypes__: additional form stuff. Some of it may be out of date with
    newer versions of SilverStripe. These are not very well tested at
    the minute, but some are useful for niche cases. Use at your own risk.
 
@@ -33,7 +33,7 @@ Installation: SMTP Mailer
 
 Included in this class is also a ProcessedEmail class that can be dropped
 in for the standard Email class. It uses Emogrifier to automatically
-inline CSS styles (must be in a <style> tag)
+inline CSS styles (must be in a \<style\> tag)
 
 Installation: LivePub
 ---------------------
