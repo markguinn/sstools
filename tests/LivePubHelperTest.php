@@ -101,6 +101,19 @@ class LivePubHelperTest extends SapphireTest {
 	
 	
 	function testIncludePhp(){
+		LivePubHelper::$template_path = array(dirname(__FILE__));
+		
+		// not publishing
+		$str = LivePubHelper::include_php('TestPhpTemplate');
+		$this->assertEquals($str, 'Hello World');
+		
+		// publishing
+		LivePubHelper::init_pub();
+		$str = LivePubHelper::include_php('TestPhpTemplate');
+		$this->assertEquals($str, '<?php include "' . dirname(__FILE__) . '/TestPhpTemplate.php"; ?>');
+		LivePubHelper::stop_pub();
+		
+		// !TODO - check for exception on template not found
 	}
 	
 	

@@ -192,25 +192,33 @@ class LivePubHelper {
 	 */
 	static function include_php($filename) {
 		global $project;
-		
-		// @TODO ideally this would use the same scheme as templates and css
-		$tpl = '/' . $filename . '.php';
-		if (!file_exists($tpl)) {
-			$tpl = '/' . $filename . '.php';
-			if (!file_exists($tpl)) {			
-				throw new Exception("Unable to locate PHP template: $filename");
+
+		// check all the possible paths we've accumulated		
+		$tpl = false;
+		foreach (self::$template_path as $path){
+			$checkPath = $path . '/' . $filename . '.php';
+			
+			if (!file_exists($tpl)) {
+				$tpl = $checkPath;
+				break;
 			}
+		}
+
+		if (!$tpl) {			
+			throw new Exception("Unable to locate PHP template: $filename (paths=".implode(':', self::$template_path).")");
 		}
 		
 		// load it up
 		if (self::is_publishing()) {
-			return file_get_contents($tpl);
+			//return file_get_contents($tpl);
+			return '<?php include "' . $tpl . '"; ?>';
 		} else {
 			ob_start();
 			include $tpl;
 			$html = ob_get_contents();
 			ob_end_clean();
-			return '<!-- php template -->' . $html . '<!-- end php template -->';
+			//return '<!-- php template -->' . $html . '<!-- end php template -->';
+			return $html;
 		}
 	}
 	

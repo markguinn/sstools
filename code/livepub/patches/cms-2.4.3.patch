@@ -1,0 +1,69 @@
+Index: code/staticpublisher/CachedPHPPage.tmpl
+===================================================================
+--- code/staticpublisher/CachedPHPPage.tmpl	(revision 114444)
++++ code/staticpublisher/CachedPHPPage.tmpl	(working copy)
+@@ -1,28 +1 @@
+-<?php
+-
+-/**
+- * This is a system-generated PHP script that performs header management for the statically cached content given below.
+- */
+-
+-define('MAX_AGE', '**MAX_AGE**');
+-define('LAST_MODIFIED', '**LAST_MODIFIED**');
+-
+-if(MAX_AGE > 0) {
+-	header("Cache-Control: max-age=" . MAX_AGE);
+-	header("Pragma:");
+-} else {
+-	header("Cache-Control: no-cache, max-age=0, must-revalidate");
+-}
+-
+-header("Expires: " . gmdate('D, d M Y H:i:s', time() + MAX_AGE) . ' GMT');
+-header("Last-modified: " . gmdate('D, d M Y H:i:s', strtotime(LAST_MODIFIED)) . ' GMT');
+-
+-if(isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
+-	if(strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']) >= strtotime(LAST_MODIFIED)) {
+-		header("Last-modified: " . gmdate('D, d M Y H:i:s', strtotime(LAST_MODIFIED)) . ' GMT', true, 304);
+-		exit;
+-	}
+-}
+-
+-?>
+ **CONTENT**
+Index: code/staticpublisher/FilesystemPublisher.php
+===================================================================
+--- code/staticpublisher/FilesystemPublisher.php	(revision 114444)
++++ code/staticpublisher/FilesystemPublisher.php	(working copy)
+@@ -164,7 +164,12 @@
+ 		$i = 0;
+ 		$totalURLs = sizeof($urls);
+ 
++		// inform livepub that we're publishing now
++		LivePubHelper::init_pub();
++		
+ 		foreach($urls as $url => $path) {
++			// reset the init code for livepub
++			LivePubHelper::clear_init_code();
+ 			
+ 			if(self::$static_base_url) Director::setBaseURL(self::$static_base_url);
+ 			$i++;
+@@ -251,6 +256,9 @@
+ 			}*/
+ 		}
+ 
++		// inform livepub that we're not publishing anymore
++		LivePubHelper::stop_pub();
++
+ 		if(self::$static_base_url) Director::setBaseURL($currentBaseURL); 
+ 		if($this->fileExtension == 'php') SSViewer::setOption('rewriteHashlinks', true); 
+ 
+@@ -275,7 +283,7 @@
+ 		$template = file_get_contents(BASE_PATH . '/cms/code/staticpublisher/CachedPHPPage.tmpl');
+ 		return str_replace(
+ 				array('**MAX_AGE**', '**LAST_MODIFIED**', '**CONTENT**'),
+-				array((int)$age, $lastModified, $content),
++				array((int)$age, $lastModified, LivePubHelper::get_init_code() . $content), 
+ 				$template);
+ 	}
+ 	/**
