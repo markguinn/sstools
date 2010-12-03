@@ -75,12 +75,6 @@ class LivePubHelper {
 		if (file_exists($file)) {
 			self::$base_init_code .= "\n<?php include_once('$file') ?>\n";
 		}
-		
-		// set up default template paths if needed
-		if (count(self::$template_path) == 0) {
-			self::$template_path[] = BASE_PATH . '/' . THEMES_DIR . '/' . SSViewer::current_theme() . '/templates/php';
-			self::$template_path[] = BASE_PATH . '/' . $project . '/templates/php';
-		}
 	}
 
 
@@ -193,18 +187,24 @@ class LivePubHelper {
 	static function include_php($filename) {
 		global $project;
 
+		// set up default template paths if needed
+		if (count(self::$template_path) == 0) {
+			self::$template_path[] = BASE_PATH . '/' . THEMES_DIR . '/' . SSViewer::current_theme() . '/templates/php';
+			self::$template_path[] = BASE_PATH . '/' . $project . '/templates/php';
+		}
+		
 		// check all the possible paths we've accumulated		
 		$tpl = false;
 		foreach (self::$template_path as $path){
 			$checkPath = $path . '/' . $filename . '.php';
 			
-			if (!file_exists($tpl)) {
+			if (file_exists($checkPath)) {
 				$tpl = $checkPath;
 				break;
 			}
 		}
 
-		if (!$tpl) {			
+		if (!$tpl) {
 			throw new Exception("Unable to locate PHP template: $filename (paths=".implode(':', self::$template_path).")");
 		}
 		
