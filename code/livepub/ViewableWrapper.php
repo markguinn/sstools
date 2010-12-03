@@ -79,7 +79,7 @@ class ViewableWrapper extends ViewableData
 			&& $this->liveVars 
 			&& isset($this->varName) 
 			&& LivePubHelper::is_publishing() 
-			&& (!is_array($this->liveVars) || in_array($field, $this->liveVars))
+			&& (!is_array($this->liveVars) || in_array($fieldName, $this->liveVars))
 		) {
 			$accessor = "get{$fieldName}";
 			$php = '';
