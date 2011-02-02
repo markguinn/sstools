@@ -35,6 +35,7 @@ class ViewableWrapper extends ViewableData
 	 */
 	function __construct($src=false) {
 		if (is_object($src)){
+			$src->class = get_class($src);
 			$this->failover = $src;
 		} elseif (is_array($src)) {
 			$this->failover = new ArrayData($src);
@@ -163,7 +164,74 @@ class ViewableWrapper extends ViewableData
 		}
 	}
 	
+
+	/**
+	 * returns the given field as a casted date object
+	 */
+	function AsDate($field) {
+		$d = $this->$field;
+		return DBField::create('Date', is_numeric($d) ? date('Y-m-d H:i:s', $d) : $d);
+	}
+
+
+	/**
+	 * returns the given field as a casted date object
+	 */
+	function AsCurrency($field) {
+		return DBField::create('Currency', $this->$field);
+	}
+
+
+	/**
+	 * returns the given field as a uniformly formatted phone #
+	 * !todo - does this need to work differently for internationals?
+	 */
+	function AsPhone($field) {
+		$str = preg_replace('/[^0-9]/', '', $this->$field);
+		$out = '';
+
+		switch (strlen($str)) {
+			case 11:
+			case 12:
+				$str = ltrim($str, '0');
+				$out .= '+' . substr($str, 0, -10) . ' ';
+			case 10:
+				$out .= '(' . substr($str, -10, 3) . ') ';
+			case 7:
+				$out .= substr($str, -7, 3) . '-' . substr($str, -4);
+			break;
+
+			default:
+				$out = $str;
+		}
+
+		return $out;
+	}
+
+
+	function DebugMe() {
+		Debug::dump($this);
+	}
 	
+	
+	/**
+	 * Return the "casting helper" (a piece of PHP code that when evaluated creates a casted value object) for a field
+	 * on this object. MODIFIED TO LEAVE FAILOVER ALONE (so it doesn't have to inherit Object).
+	 *
+	 * @param string $field
+	 * @return string
+	 */
+	public function castingHelper($field) {
+		if($this->hasMethod('db') && $fieldSpec = $this->db($field)) {
+			return $fieldSpec;
+		}
+
+		$specs = Object::combined_static(get_class($this), 'casting');
+		if(isset($specs[$field])) return $specs[$field];
+
+		//if($this->failover) return $this->failover->castingHelper($field);
+	}
+
 	/**
 	 * This is called by LivePubHelper to retrieve initialization
 	 * code that gets added to the top of the cached page.

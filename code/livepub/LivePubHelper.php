@@ -191,6 +191,7 @@ class LivePubHelper {
 		if (count(self::$template_path) == 0) {
 			self::$template_path[] = BASE_PATH . '/' . THEMES_DIR . '/' . SSViewer::current_theme() . '/templates/php';
 			self::$template_path[] = BASE_PATH . '/' . $project . '/templates/php';
+			self::$template_path[] = BASE_PATH . '/' . SSTOOLS_BASE . '/templates/php';
 		}
 		
 		// check all the possible paths we've accumulated		
@@ -247,6 +248,30 @@ class LivePubHelper {
 		}
 
 		return $obj;
+	}
+
+
+	/**
+	 * Takes an array of objects or arrays and creates a dataobjectset,
+	 * calling {@link LivePubHelper::wrap} on each item in the array.
+	 *
+	 * @static
+	 * @param array $list
+	 * @param string $class [optional] - default is 'ViewableWrapper'
+	 * @param string $exclude [optional] - filter set by excluding these values
+	 * @param string $exclude_field [optional] - field to filter by
+	 * @return DataObjectSet
+	 */
+	static function wrap_set(array $list, $class = 'ViewableWrapper', $exclude=null, $exclude_field=null) {
+		$set = new DataObjectSet();
+
+		foreach ($list as $r) {
+			$obj = self::wrap($r, $class);
+			if ($exclude && in_array($obj->getField($exclude_field), $exclude)) continue;
+			$set->push($obj);
+		}
+
+		return $set;
 	}
 	
 	
