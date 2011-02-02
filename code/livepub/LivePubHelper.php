@@ -252,14 +252,17 @@ class LivePubHelper {
 	
 	/**
 	 * if this is called, the published version of the page
-	 * will include and initialize the DB::query stub (see DBWrapper.php)
+	 * will include and initialize the DB::query stub
 	 * and connect to the main silverstripe database.
 	 * This allows limited use of DB::query() in both a live
 	 * and published context.	 
 	 */
 	static function require_silverstripe_db() {
+		global $databaseConfig;
 		if (self::is_publishing() && !self::$silverstripe_db_included) {
+			self::$silverstripe_db_included = true;
 			self::$init_code[] = '
+				$databaseConfig = '.var_export($databaseConfig, true).';
 				require_once "'.dirname(__FILE__).'/classes/LivePubDB.php";
 				DB::init();
 			';
@@ -290,9 +293,13 @@ class LivePubHelper_ControllerHooks extends Extension {
 	 */
 	function WrappedSession(){
 		LivePubHelper::$init_code[] = 'if (!session_id()) session_start();';
-		$obj = new LivePubWrapper($_SESSION);
+		$obj = LivePubHelper::wrap($_SESSION);
 		$obj->setVar('_SESSION');
 		return $obj;
+	}
+
+	function LPH_Session(){
+		return $this->WrappedSession();
 	}
 
 
@@ -300,11 +307,15 @@ class LivePubHelper_ControllerHooks extends Extension {
 	 * returns a viewable wrapper around the request
 	 */
 	function WrappedRequest(){
-		$obj = new LivePubWrapper($_REQUEST);
+		$obj = LivePubHelper::wrap($_REQUEST);
 		$obj->setVar('_REQUEST');
 		return $obj;
 	}
 
+	function LPH_Request(){
+		return $this->WrappedRequest();
+	}
+	
 
 	/**
 	 * are we currently publishing?

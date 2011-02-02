@@ -42,7 +42,7 @@ Installation: LivePub
    *NOTE: you have to use 'php' not 'html' caching. Also, note that it has only been tested
    with filesystempublisher*
 2. Comment out or remove cache management stuff in _cms/code/staticpublisher/CachedPHPPage.tmpl_
-   (only \*\*CONTENT\*\* is required)
+   (only \*\*CONTENT\*\* is required) - NOTE that this is covered in the patches
 3. In _cms/code/staticpublisher/FilesystemPublisher.php_, apply the appropriate patch from
    the _sstools/code/livepub/patches_ folder (or simply follow the instructions in the 
    MANUAL.md file in the same folder)

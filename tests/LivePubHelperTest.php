@@ -113,7 +113,14 @@ class LivePubHelperTest extends SapphireTest {
 		$this->assertEquals($str, '<?php include "' . dirname(__FILE__) . '/TestPhpTemplate.php"; ?>');
 		LivePubHelper::stop_pub();
 		
-		// !TODO - check for exception on template not found
+		// check for exception on template not found
+		$wasThrown = false;
+		try {
+			LivePubHelper::include_php('ThisTemplateDoesntExist');
+		} catch (Exception $e) {
+			$wasThrown = true;
+		}
+	    $this->assertTrue($wasThrown);
 	}
 	
 	
@@ -197,10 +204,44 @@ class LivePubHelperTest extends SapphireTest {
 			'A=<?php echo htmlentities($myvar->a); ?>, B=<?php echo htmlentities($myvar->b); ?>, C.E=<?php echo htmlentities($myvar_c["e"]); ?>, D.H=<?php echo htmlentities($myvar_d->h); ?>, E=12'
 		);
 		
+		// test an object with different features
+		$o = $this->getObjectWrapper();
+		$o->setVar('myvar');
+		$o->setLiveVars(array('a','b'));
+		$o->setUnescapedVars(array('a'));
+		$this->assertEquals(
+			$this->getTestTemplate()->process($o),
+			'A=<?php echo $myvar->a; ?>, B=<?php echo htmlentities($myvar->b); ?>, C.E=f, D.H=i, E=12'
+		);
+
 		LivePubHelper::stop_pub();
 	}
 	
-	
+
+	/**
+	 * check silverstripe db stub
+	 */
+	function testRequireSilverstripeDB(){
+		LivePubHelper::$init_code = array();
+
+		// check that nothing happens when not publishing
+		LivePubHelper::require_silverstripe_db();
+		$this->assertEquals(count(LivePubHelper::$init_code), 0);
+
+		// check that it does happen when publishing
+		LivePubHelper::init_pub();
+		LivePubHelper::require_silverstripe_db();
+		$this->assertEquals(count(LivePubHelper::$init_code), 1);
+		$this->assertEquals(preg_match('/\$databaseConfig = array \(.+\);/ms', LivePubHelper::$init_code[0]), 1);
+
+		// check that it's not included twice
+		LivePubHelper::require_silverstripe_db();
+		$this->assertEquals(count(LivePubHelper::$init_code), 1);
+
+		LivePubHelper::stop_pub();
+	}
+
+
 	protected function getArrayWrapper(){
 		$o2 = new stdClass();
 		$o2->h = 'i';

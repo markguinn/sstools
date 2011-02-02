@@ -57,29 +57,43 @@ class ViewableWrapper extends ViewableData
 	 */
 	function __get($field){
 		$val = $this->wrapObject( parent::__get($field) );
-		
+
 		if (isset($this->varName) && is_object($val) && $val instanceof ViewableWrapper){
 			$val->setVar($this->varName . '_' . $field);
+
+			// if this variable isn't live, none of it's children should be
+			if (!$this->isLiveVar($field)){
+				$val->setLiveVars(false);
+			}
 		}
 		
 		return $val;
 	}
 	
-	
+
+	/**
+	 * Is this variable live in published mode?
+	 * @param string $field
+	 * @return bool
+	 */
+	function isLiveVar($fieldName){
+		return $this->liveVars && (!is_array($this->liveVars) || in_array($fieldName, $this->liveVars));
+	}
+
+
 	/**
 	 * If we're publishing, returns proper php
 	 */
 	public function obj($fieldName, $arguments = null, $forceReturnedObject = true, $cache = false, $cacheName = null) {
 		$value = parent::obj($fieldName, $arguments, $forceReturnedObject, $cache, $cacheName);
-		
-		// if we're publishing and this variable is qualified,
-		// output php code instead
+
+		// if we're publishing and this variable is qualified, output php code instead
 		if (
 			$this->failover 
-			&& $this->liveVars 
-			&& isset($this->varName) 
+			&& $this->liveVars
+			&& isset($this->varName)
 			&& LivePubHelper::is_publishing() 
-			&& (!is_array($this->liveVars) || in_array($fieldName, $this->liveVars))
+			&& $this->isLiveVar($fieldName)
 		) {
 			$accessor = "get{$fieldName}";
 			$php = '';
@@ -115,109 +129,7 @@ class ViewableWrapper extends ViewableData
 		
 		return $value;
 	}
-	
-	
-	/**
-	 * If we're not currently publishing, this just takes any
-	 * array or object and wraps it in a ViewableData object so
-	 * it can be used from a template. Even nested arrays and
-	 * such will be handled appropriately.
-	 *
-	 * If we're publishing, it adds live php references to the
-	 * variables. You would want to either add initialization
-	 * code manually via LivePubHelper::exec_php or $init_code
-	 * or define the getStaticInit() function on a subclass.
-	 * You must also use setVar to specify the name of the variable
-	 * you set up. (could also be something like '_SESSION' to
-	 * access the session.
-	 */
-/*
-	protected $_get_cache = array();
-	function __get($field) {
-		$fn = "get$field";		
-		if (
-			$this->_liveStaticVars 
-			&& isset($this->_varName) 
-			&& LivePubHelper::is_publishing() 
-			&& !method_exists($this, $field) 
-			&& !method_exists($this, $fn)
-			&& (!is_array($this->_liveStaticVars) || in_array($field, $this->_liveStaticVars))
-		) {
-			try {
-				$newvar = $this->_varName . '_' . $field;
-				if (is_object($this->_srcdata)) {
-					if (is_callable(array($this->_srcdata, $fn))){
-						$val = $this->_srcdata->$fn();
-						$php = '$' . $this->_varName . '->' . $fn . '()';
-					} else {
-						$val = $this->_srcdata->$field;
-						$php = '$' . $this->_varName . '->' . $field;
-					} 
-				} else {
-					$val = $this->_srcdata[$field];
-					$php = '$' . $this->_varName . '["' . $field . '"]';
-				}
-				
-				$val = $this->wrapObject($val);
-				if (is_object($val) && $val instanceof LivePubWrapper) {
-					$val->setVar($newvar);
-					return '<?php $' . $newvar . ' = ' . $php . ' ?>';
-				} else {										
-					return in_array($field, $this->_liveStaticUnescaped)
-						? '<?php echo ' . $php . '; ?>'
-						: '<?php echo htmlentities(' . $php . '); ?>';
-				}
-			} catch (Exception $e) {
-				return parent::__get($field);
-			}
-		} else {
-			if (!isset($this->_get_cache[$field])) {
-				try {
-					// allow some speed shortcuts using _
-					if (strpos($field, '_') !== false) {
-						$pieces = explode('_', $field);
-						$cur = $this->_srcdata;
-						$key = "";
-						foreach ($pieces as $field2) {
-							$key .= "_$field2";
-							if (isset($this->_get_cache[$key])) {
-								$cur = $this->_get_cache[$key];
-							} elseif (is_object($cur)) {
-								$fn = "get$field2";
-								if (is_callable(array($cur, $fn))) {
-									$cur = $cur->$fn();
-								} else {
-									$cur = $cur->$field2;
-								}
-							} elseif (is_array($cur)) {
-								$cur = $cur[$field2];
-							} else {
-								$val = $cur;
-								break;
-							}
-						}
-						
-						$val = $cur;
-					} else {
-						// get the value
-						if (is_object($this->_srcdata)) {
-							$val = is_callable(array($this->_srcdata, $fn)) ? $this->_srcdata->$fn() : $this->_srcdata->$field;
-						} else {
-							$val = $this->_srcdata[$field];
-						}
-					}
-					
-					$this->_get_cache[$field] = $this->wrapObject($val);				
-				} catch (Exception $e) {
-					$this->_get_cache[$field] = parent::__get($field);
-				}
-			}
-	
-			return $this->_get_cache[$field];
-		}
-	}
-*/
-	
+		
 	
 	/**
 	 * if an object isn't already wrapped in Silverstripe's stuff,
@@ -260,21 +172,63 @@ class ViewableWrapper extends ViewableData
 		return false;
 	}
 
+
+	/**
+	 * Set the variable name used for nested wrappers
+	 * in published mode.
+	 * @param string $name
+	 * @return ViewableWrapper (chainable)
+	 */
 	function setVar($name) {
 		$this->varName = $name;
+		return $this;
 	}
-	
+
+
+	/**
+	 * @return string
+	 */
 	function getVar() {
 		return $this->varName;
 	}
-	
+
+
+	/**
+	 * @param  bool|array $lv
+	 * @return ViewableWrapper (chainable)
+	 */
+	function setLiveVars($lv){
+		$this->liveVars = $lv;
+		return $this;
+	}
+
+
+	/**
+	 * @return bool|array
+	 */
 	function getLiveVars(){
 		return $this->liveVars;
 	}
-	
-	function setLiveVars($lv){
-		$this->liveVars = $lv;
+
+
+	/**
+	 * Sets which variables should NOT be escaped.
+	 * @NOTE this only affects published mode
+	 * @param  array $vars
+	 * @return ViewableWrapper (chainable)
+	 */
+	function setUnescapedVars(array $vars){
+		$this->liveVarsUnescaped = $vars;
+		return $this;
 	}
-	
+
+
+	/**
+	 * @return array
+	 */
+	function getUnescapedVars(){
+		return $this->liveVarsUnescaped;
+	}
+
 }
 
