@@ -1,0 +1,63 @@
+/*
+ul.flash_messages {
+	position: fixed;
+	display: block;
+	width: 300px;
+	top: 0px;
+	left: 50%;
+	margin-left: -150px;
+}
+
+ul.flash_messages li {
+	display: block;
+	margin: 5px 0px;
+	background: #444;
+	border: 1px solid #fff;
+	color: #fff;
+	text-align: center;
+	padding: 7px;
+	-moz-border-radius: 7px;
+	-webkit-border-radius: 7px;
+}
+
+ul.flash_messages li.good {
+	background: #060;
+}
+
+ul.flash_messages li.bad {
+	background: #800;
+}
+*/
+
+ul.flash_messages {
+	background: #fff;
+	border: 1px solid #5d5d5d;
+	color: #555555;
+	position: absolute;
+	z-index: 20;
+	top: -2px;
+	left: 50%;
+	width: 400px;
+	margin-left: -200px;
+	padding: 15px;
+	display: none;
+	box-shadow:3px 3px 5px #444;
+	-webkit-box-shadow:3px 3px 5px #444;
+	-moz-box-shadow: 3px 3px 5px #444;
+	/* For IE 8 */
+	-ms-filter: "progid:DXImageTransform.Microsoft.Shadow(Strength=4, Direction=135, Color='#444444')";
+	/* For IE 5.5 - 7 */
+	filter: progid:DXImageTransform.Microsoft.Shadow(Strength=4, Direction=135, Color='#444444');
+}
+ul.flash_messages li {
+	list-style: none;
+	min-height: 25px;
+	line-height: 25px;
+	padding-left: 30px;
+}
+ul.flash_messages li.good {
+	background: url('/cms/images/alert-good.gif') no-repeat left center;
+}
+ul.flash_messages li.bad {
+	background: url('/cms/images/alert-bad.gif') no-repeat left center;
+}
